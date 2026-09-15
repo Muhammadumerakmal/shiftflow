@@ -88,7 +88,7 @@ export default function LandingPage() {
       {/* Nav */}
       <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-md z-50 border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+          <Link href="/" className="flex items-center gap-2.5">
             <div
               className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-md"
               style={{ background: "linear-gradient(135deg, #5B8DEF, #9B7BFF)" }}
@@ -96,19 +96,20 @@ export default function LandingPage() {
               S
             </div>
             <span className="text-lg font-semibold text-text-primary">ShiftFlow</span>
-          </div>
+          </Link>
           <div className="flex items-center gap-3">
             <Link
               href="/login"
-              className="text-sm font-medium text-text-secondary hover:text-text-primary transition"
+              className="text-sm font-medium text-text-secondary hover:text-text-primary px-4 py-2 rounded-xl transition"
             >
               Log In
             </Link>
             <Link
-              href="/login"
-              className="text-sm font-medium bg-accent text-white px-5 py-2.5 rounded-xl hover:opacity-90 transition shadow-[0_4px_14px_rgba(91,141,239,0.3)]"
+              href="/signup"
+              className="text-sm font-semibold text-white px-5 py-2.5 rounded-xl transition shadow-[0_4px_14px_rgba(91,141,239,0.3)] hover:opacity-90"
+              style={{ background: "linear-gradient(135deg, #5B8DEF, #9B7BFF)" }}
             >
-              Get Started
+              Sign Up Free
             </Link>
           </div>
         </div>
@@ -137,17 +138,42 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
-              href="/login"
-              className="w-full sm:w-auto bg-accent text-white font-medium px-8 py-3.5 rounded-xl hover:opacity-90 transition text-center shadow-[0_6px_20px_rgba(91,141,239,0.35)]"
+              href="/signup"
+              className="w-full sm:w-auto text-white font-semibold px-8 py-3.5 rounded-xl transition text-center shadow-[0_6px_20px_rgba(91,141,239,0.35)] hover:opacity-90"
+              style={{ background: "linear-gradient(135deg, #5B8DEF, #9B7BFF)" }}
             >
-              Start Free — No Card Needed
+              Sign Up — It&apos;s Free
             </Link>
-            <a
-              href="#features"
+            <Link
+              href="/login"
               className="w-full sm:w-auto border border-gray-200 text-text-secondary font-medium px-8 py-3.5 rounded-xl hover:bg-gray-50 transition text-center"
             >
-              See How It Works
-            </a>
+              Log In
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats */}
+      <section className="py-16 px-4 sm:px-6 border-y border-gray-100">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {[
+              { value: "2min", label: "Setup time" },
+              { value: "100%", label: "Free to use" },
+              { value: "24/7", label: "AI assistant" },
+              { value: "1-click", label: "Shift swaps" },
+            ].map((s) => (
+              <div key={s.label} className="text-center">
+                <div
+                  className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent mb-1"
+                  style={{ backgroundImage: "linear-gradient(135deg, #5B8DEF, #9B7BFF)" }}
+                >
+                  {s.value}
+                </div>
+                <div className="text-sm text-text-secondary">{s.label}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -267,12 +293,20 @@ export default function LandingPage() {
           <p className="text-white/70 text-lg mb-8">
             Join retail teams that use ShiftFlow to save hours every week.
           </p>
-          <Link
-            href="/login"
-            className="inline-block bg-white text-accent font-semibold px-8 py-3.5 rounded-xl hover:bg-gray-50 transition shadow-lg"
-          >
-            Get Started Free
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              href="/signup"
+              className="w-full sm:w-auto bg-white text-accent font-semibold px-8 py-3.5 rounded-xl hover:bg-gray-50 transition shadow-lg"
+            >
+              Sign Up Free
+            </Link>
+            <Link
+              href="/login"
+              className="w-full sm:w-auto border border-white/30 text-white font-medium px-8 py-3.5 rounded-xl hover:bg-white/10 transition text-center"
+            >
+              Log In
+            </Link>
+          </div>
         </div>
       </section>
 
