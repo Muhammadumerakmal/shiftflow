@@ -1,0 +1,16 @@
+{
+  "name": "shiftflow",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:backend": "npm run dev -w @shiftflow/backend",
+    "dev:frontend": "npm run dev -w @shiftflow/frontend",
+    "build": "npm run build --workspaces --if-present",
+    "build:frontend": "npm run build -w @shiftflow/frontend",
+    "start": "npm run start -w @shiftflow/backend"
+  }
+}

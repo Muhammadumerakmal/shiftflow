@@ -1,16 +1,21 @@
 {
-  "name": "shiftflow",
+  "name": "@shiftflow/backend",
   "version": "1.0.0",
   "private": true,
-  "workspaces": [
-    "packages/*"
-  ],
+  "type": "module",
+  "main": "src/server.js",
   "scripts": {
-    "dev": "npm run dev --workspaces",
-    "dev:backend": "npm run dev -w packages/backend",
-    "dev:frontend": "npm run dev -w packages/frontend",
-    "build": "npm run build --workspaces",
-    "build:frontend": "npm run build -w packages/frontend",
-    "start": "npm run start -w packages/backend"
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^5.0.0",
+    "pg": "^8.13.0",
+    "dotenv": "^16.4.5",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "zod": "^3.23.8",
+    "cors": "^2.8.5",
+    "nodemailer": "^6.9.15"
   }
 }

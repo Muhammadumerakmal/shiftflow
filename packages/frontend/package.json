@@ -1,5 +1,5 @@
 {
-  "name": "shiftflow-frontend",
+  "name": "@shiftflow/frontend",
   "version": "1.0.0",
   "private": true,
   "scripts": {

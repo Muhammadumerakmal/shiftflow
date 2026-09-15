@@ -1,22 +1,2 @@
-# dependencies
-node_modules/
-
-# env / secrets
-.env
-.env.local
-.env.*.local
-
-# next.js build output
-.next/
-out/
-
-# logs
-*.log
-npm-debug.log*
-
-# misc
 .DS_Store
-
-# build output
-dist/
-build/
+*.log
