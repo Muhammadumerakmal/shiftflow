@@ -61,7 +61,7 @@ Route -> Middleware (auth/validation) -> Controller -> Service -> Model -> Datab
 - ✅ **Time-off** — request/list/approve/deny, overlap detection
 - ✅ **Attendance** — clock in/out, variance tracking, CSV export
 - ✅ **Notifications** — in-app + email, wired to shifts, swaps, time-off
-- ✅ **AI assistant** — Google Gemini-powered chat with schedule context
+- ✅ **AI agent** — OpenAI function-calling agent with read/write tools for schedule, swaps, time-off
 - ✅ **Input validation** — Zod schemas on all mutation endpoints
 - ✅ **Store-scoping** — staff can only access their own store data
 
@@ -118,7 +118,7 @@ Base URL: `/api/v1`
 | GET | `/notifications` | Yes | List notifications |
 | PATCH | `/notifications/:notificationId/read` | Yes | Mark read |
 | **AI** | | | |
-| POST | `/ai/chat` | Yes | Chat with AI assistant |
+| POST | `/stores/:storeId/ai/chat` | Yes | Chat with AI agent (function calling) |
 
 ## Frontend
 

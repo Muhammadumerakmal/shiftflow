@@ -92,7 +92,7 @@ export const api = {
   markNotificationRead: (id) =>
     request(`/notifications/${id}/read`, { method: "PATCH" }),
 
-  // AI assistant (Gemini-backed, schedule-aware)
-  chat: (message, history = []) =>
-    request(`/ai/chat`, { method: "POST", body: { message, history } }),
+  // AI agent (OpenAI function-calling, store-scoped)
+  chat: (storeId, message, history = []) =>
+    request(`/stores/${storeId}/ai/chat`, { method: "POST", body: { message, history } }),
 };

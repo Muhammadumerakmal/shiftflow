@@ -15,6 +15,10 @@ export const env = {
     apiKey: process.env.GEMINI_API_KEY || null,
     model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
   },
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY || null,
+    model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+  },
   smtp: {
     host: process.env.SMTP_HOST || null,
     port: process.env.SMTP_PORT || 587,

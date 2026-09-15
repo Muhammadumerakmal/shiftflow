@@ -6,6 +6,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
+import { useAuth } from "../lib/auth-context";
 
 const QUICK_REPLIES = ["When's my next shift?", "Request time off", "How do I swap a shift?"];
 
@@ -26,6 +27,7 @@ function ChatBubble({ from, children }) {
 }
 
 export default function ChatWidget({ company = "ShiftFlow", botName = "Flow" }) {
+  const { storeId } = useAuth();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
     { from: "bot", text: "Hey! 👋 How can I help you with your shifts today?" },
@@ -52,7 +54,7 @@ export default function ChatWidget({ company = "ShiftFlow", botName = "Flow" }) 
     setMessages((m) => [...m, { from: "user", text: msg }]);
     setSending(true);
     try {
-      const { reply } = await api.chat(msg, history);
+      const { reply } = await api.chat(storeId, msg, history);
       setMessages((m) => [...m, { from: "bot", text: reply }]);
     } catch (err) {
       setMessages((m) => [

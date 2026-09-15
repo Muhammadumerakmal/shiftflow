@@ -6,7 +6,7 @@ const router = Router();
 
 router.use(authMiddleware);
 
-// POST /api/ai/chat  { message: string, history?: [{ role, text }] }
-router.post("/ai/chat", AiController.chat);
+// POST /api/v1/stores/:storeId/ai/chat
+router.post("/stores/:storeId/ai/chat", AiController.chat);
 
 export default router;
