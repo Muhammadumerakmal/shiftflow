@@ -70,7 +70,8 @@ export default function ChatWidget({ company = "ShiftFlow", botName = "Flow" }) 
         onClick={() => setOpen(true)}
         title="Chat with Flow"
         className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full text-white text-2xl
-                   grid place-items-center shadow-[0_10px_30px_rgba(91,141,239,0.5)]"
+                   grid place-items-center shadow-[0_10px_30px_rgba(91,141,239,0.5)]
+                   hover:scale-110 transition-transform duration-200"
         style={{ background: "linear-gradient(135deg, #5B8DEF, #9B7BFF)" }}
       >
         ✦
@@ -82,11 +83,20 @@ export default function ChatWidget({ company = "ShiftFlow", botName = "Flow" }) 
     <div
       className="fixed bottom-6 right-6 z-50 w-[380px] max-w-[calc(100vw-2rem)] h-[600px]
                  max-h-[calc(100vh-3rem)] bg-[#F8F9FA] rounded-[28px] overflow-hidden
-                 flex flex-col shadow-[0_24px_60px_rgba(26,26,46,0.18)]"
+                 flex flex-col shadow-[0_24px_60px_rgba(26,26,46,0.18)]
+                 animate-fade-in-up"
     >
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4">
-        <span className="font-bold text-[#1A1A2E] text-[15px]">◈ {company}</span>
+        <span className="font-bold text-[#1A1A2E] text-[15px]">
+          <span
+            className="bg-clip-text text-transparent"
+            style={{ backgroundImage: "linear-gradient(135deg, #5B8DEF, #9B7BFF)" }}
+          >
+            ◈
+          </span>{" "}
+          {company}
+        </span>
         <div className="flex gap-3.5 text-[#7A8194] text-lg">
           <button title="Reset" onClick={() => setMessages([{ from: "bot", text: "Fresh start! How can I help?" }])}>⟳</button>
           <button title="Close" onClick={() => setOpen(false)}>✕</button>
@@ -124,8 +134,9 @@ export default function ChatWidget({ company = "ShiftFlow", botName = "Flow" }) 
             key={label}
             onClick={() => send(label)}
             disabled={sending}
-            className="border border-[#5B8DEF]/40 text-[#5B8DEF] bg-white px-3.5 py-2
-                       rounded-full text-[13px] hover:bg-[#5B8DEF]/[0.08] disabled:opacity-50"
+            className="border border-accent/30 text-accent bg-white px-3.5 py-2
+                       rounded-full text-[13px] hover:bg-accent/10 hover:border-accent/50
+                       disabled:opacity-50 transition-all duration-200"
           >
             {label}
           </button>
@@ -147,7 +158,9 @@ export default function ChatWidget({ company = "ShiftFlow", botName = "Flow" }) 
           onClick={() => send()}
           disabled={sending}
           title="Send"
-          className="w-[42px] h-[42px] rounded-full bg-[#5B8DEF] text-white text-lg grid place-items-center disabled:opacity-50"
+          className="w-[42px] h-[42px] rounded-full bg-accent text-white text-lg grid place-items-center
+                     disabled:opacity-50 hover:bg-accent-light transition-colors duration-200
+                     shadow-[0_4px_12px_rgba(91,141,239,0.3)]"
         >
           ↑
         </button>
