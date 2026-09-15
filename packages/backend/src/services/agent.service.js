@@ -1,4 +1,3 @@
-import { Agent, Runner, setOpenAIAPI, OpenAIChatCompletionsModel } from "@openai/agents";
 import OpenAI from "openai";
 import { env } from "../config/env.js";
 import { ShiftModel } from "../models/shift.model.js";
@@ -9,17 +8,7 @@ import { AttendanceModel } from "../models/attendance.model.js";
 import { SwapService } from "../services/swap.service.js";
 import { TimeOffService } from "../services/timeOff.service.js";
 
-// Use Chat Completions API (Gemini doesn't support Responses API)
-setOpenAIAPI("chat_completions");
-
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai";
-
-function getGeminiClient() {
-  return new OpenAI({
-    apiKey: env.gemini.apiKey,
-    baseURL: GEMINI_BASE_URL,
-  });
-}
 
 const SYSTEM_PROMPT = `You are Flow, the ShiftFlow AI assistant for store managers.
 You help manage shifts, staff, swap requests, and time-off requests.
@@ -29,7 +18,7 @@ Be concise, friendly, and confirm before making any changes that create, approve
 When asked about schedule coverage, use the tools to check who is actually scheduled.
 Never invent data — always use the tools to get real information.`;
 
-// ── Tool definitions (OpenAI function calling format) ─────────────
+// ── Tool definitions ──────────────────────────────────────────────
 
 const TOOLS = [
   {
@@ -266,33 +255,7 @@ async function executeTool(toolName, args, storeId, userId) {
   }
 }
 
-// ── Agent setup ───────────────────────────────────────────────────
-
-function createAgent(storeId, userId) {
-  const client = getGeminiClient();
-  const model = new OpenAIChatCompletionsModel(client, env.gemini.model || "gemini-2.0-flash");
-
-  const agent = new Agent({
-    name: "Flow",
-    instructions: SYSTEM_PROMPT,
-    model,
-    tools: TOOLS.map((t) => ({
-      ...t,
-      function: {
-        ...t.function,
-        // Wrap execute to inject storeId/userId context
-        execute: async (args) => {
-          const result = await executeTool(t.function.name, args, storeId, userId);
-          return JSON.stringify(result);
-        },
-      },
-    })),
-  });
-
-  return agent;
-}
-
-// ── Main entry point ──────────────────────────────────────────────
+// ── Agent loop (Gemini via OpenAI-compatible endpoint) ─────────────
 
 export async function agentChat({ message, history = [], storeId, userId }) {
   if (!env.gemini.apiKey) {
@@ -306,24 +269,54 @@ export async function agentChat({ message, history = [], storeId, userId }) {
     throw err;
   }
 
-  const agent = createAgent(storeId, userId);
+  const client = new OpenAI({
+    apiKey: env.gemini.apiKey,
+    baseURL: GEMINI_BASE_URL,
+  });
 
-  // Convert history to the SDK's input format
-  const input = [
-    ...history.map((t) => ({
-      role: t.role === "assistant" ? "assistant" : "user",
-      content: t.text,
-    })),
+  const messages = [
+    { role: "system", content: SYSTEM_PROMPT },
+    ...history.map((t) => ({ role: t.role === "assistant" ? "assistant" : "user", content: t.text })),
     { role: "user", content: message },
   ];
 
-  const result = await Runner.run(agent, input, {
-    maxTurns: 6,
-  });
+  // Run up to 5 tool-call rounds
+  for (let round = 0; round < 5; round++) {
+    const res = await client.chat.completions.create({
+      model: env.gemini.model || "gemini-2.0-flash",
+      messages,
+      tools: TOOLS,
+      tool_choice: "auto",
+      temperature: 0.3,
+    });
 
-  // Extract final text output
-  const finalOutput = result.finalOutput;
-  if (typeof finalOutput === "string") return finalOutput;
-  if (finalOutput?.content) return finalOutput.content;
-  return "I wasn't able to complete that request.";
+    const choice = res.choices?.[0];
+    if (!choice) {
+      const err = new Error("Gemini returned no choices.");
+      err.status = 502;
+      throw err;
+    }
+
+    const assistantMessage = choice.message;
+    messages.push(assistantMessage);
+
+    // No tool calls — return the text response
+    if (!assistantMessage.tool_calls?.length) {
+      return assistantMessage.content || "";
+    }
+
+    // Execute each tool call
+    for (const tc of assistantMessage.tool_calls) {
+      const args = JSON.parse(tc.function.arguments || "{}");
+      const result = await executeTool(tc.function.name, args, storeId, userId);
+      messages.push({
+        role: "tool",
+        tool_call_id: tc.id,
+        content: typeof result === "string" ? result : JSON.stringify(result),
+      });
+    }
+  }
+
+  const last = messages[messages.length - 1];
+  return last?.content || "I wasn't able to complete that request.";
 }
