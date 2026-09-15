@@ -5,7 +5,15 @@ import { errorHandler } from "./middleware/errorHandler.middleware.js";
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "https://shiftflow-frontend-ten.vercel.app",
+      "http://localhost:3000",
+    ],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 app.get("/", (req, res) => {

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth-context";
+import LandingPage from "../components/LandingPage";
 
 export default function RootPage() {
   const { user, loading } = useAuth();
@@ -10,8 +11,24 @@ export default function RootPage() {
 
   useEffect(() => {
     if (loading) return;
-    router.push(user ? "/schedule" : "/login");
+    if (user) router.push("/schedule");
   }, [user, loading, router]);
 
-  return <div className="min-h-screen flex items-center justify-center text-text-secondary">Loading…</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-text-secondary">
+        Loading...
+      </div>
+    );
+  }
+
+  if (user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-text-secondary">
+        Redirecting to dashboard...
+      </div>
+    );
+  }
+
+  return <LandingPage />;
 }

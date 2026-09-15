@@ -5,11 +5,10 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/auth-context";
 
 export default function LoginPage() {
-  const { login, setActiveStore } = useAuth();
+  const { login } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [storeId, setStoreId] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -19,7 +18,6 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(email, password);
-      if (storeId) setActiveStore(storeId.trim());
       router.push("/schedule");
     } catch (err) {
       setError(err.message);
@@ -65,19 +63,6 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="••••••••"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">
-              Store ID <span className="text-text-secondary font-normal">(temporary — MVP)</span>
-            </label>
-            <input
-              type="text"
-              value={storeId}
-              onChange={(e) => setStoreId(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="Paste your store UUID"
             />
           </div>
 

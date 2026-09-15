@@ -24,9 +24,11 @@ export function AuthProvider({ children }) {
     const result = await api.login(email, password);
     localStorage.setItem("accessToken", result.accessToken);
     localStorage.setItem("user", JSON.stringify(result.user));
+    if (result.user.storeId) {
+      localStorage.setItem("storeId", result.user.storeId);
+      setStoreId(result.user.storeId);
+    }
     setUser(result.user);
-    // Login response doesn't include storeId directly — it's fetched from staff list
-    // or carried over from registration. For MVP single-store, we resolve it on first load.
     return result;
   }
 
