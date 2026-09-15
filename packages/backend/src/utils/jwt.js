@@ -8,3 +8,7 @@ export function signAccessToken(payload) {
 export function signRefreshToken(payload) {
   return jwt.sign(payload, env.jwtRefreshSecret, { expiresIn: "7d" });
 }
+
+export function verifyRefreshToken(token) {
+  return jwt.verify(token, env.jwtRefreshSecret);
+}

@@ -101,4 +101,19 @@ export const ShiftModel = {
     );
     return rows;
   },
+
+  // Get unique user IDs from draft shifts about to be published (for notifications)
+  async findAffectedUserIds(storeId, weekStart, weekEnd) {
+    const { rows } = await pool.query(
+      `SELECT DISTINCT user_id
+       FROM shifts
+       WHERE store_id = $1
+         AND status = 'draft'
+         AND starts_at >= $2
+         AND starts_at < $3
+         AND user_id IS NOT NULL`,
+      [storeId, weekStart, weekEnd]
+    );
+    return rows.map((r) => r.user_id);
+  },
 };

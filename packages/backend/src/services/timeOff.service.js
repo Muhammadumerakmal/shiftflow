@@ -1,5 +1,7 @@
 import { TimeOffModel } from "../models/timeOff.model.js";
+import { StoreModel } from "../models/store.model.js";
 import { ActivityLogService } from "./activityLog.service.js";
+import { NotificationService } from "./notification.service.js";
 import { AppError } from "../middleware/errorHandler.middleware.js";
 
 export const TimeOffService = {
@@ -27,7 +29,16 @@ export const TimeOffService = {
       metadata: { startsOn, endsOn },
     });
 
-    // TODO (V1.1): notify manager
+    // Notify managers/owners about the new time-off request
+    const managerIds = await StoreModel.getManagerUserIds(storeId);
+    for (const managerId of managerIds) {
+      await NotificationService.notify({
+        userId: managerId,
+        type: "time_off_resolved",
+        title: "New time-off request",
+        body: `A staff member has requested time off from ${startsOn} to ${endsOn}.`,
+      }).catch(() => {});
+    }
 
     return request;
   },
@@ -57,7 +68,13 @@ export const TimeOffService = {
       entityId: requestId,
     });
 
-    // TODO (V1.1): notify staff member
+    // Notify the staff member that their request was approved
+    await NotificationService.notify({
+      userId: request.user_id,
+      type: "time_off_resolved",
+      title: "Time-off request approved",
+      body: `Your time-off request from ${request.starts_on} to ${request.ends_on} has been approved.`,
+    }).catch(() => {});
 
     return updated;
   },
@@ -82,6 +99,14 @@ export const TimeOffService = {
       entityType: "time_off_request",
       entityId: requestId,
     });
+
+    // Notify the staff member that their request was denied
+    await NotificationService.notify({
+      userId: request.user_id,
+      type: "time_off_resolved",
+      title: "Time-off request denied",
+      body: `Your time-off request from ${request.starts_on} to ${request.ends_on} has been denied.`,
+    }).catch(() => {});
 
     return updated;
   },

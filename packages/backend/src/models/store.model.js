@@ -75,6 +75,28 @@ export const StoreModel = {
     return rows[0] || null;
   },
 
+  async findStaffByUserId(userId) {
+    const { rows } = await pool.query(
+      "SELECT * FROM store_staff WHERE user_id = $1 AND is_active = true LIMIT 1",
+      [userId]
+    );
+    return rows[0] || null;
+  },
+
+  // Get manager/owner user IDs for a store (for sending notifications)
+  async getManagerUserIds(storeId) {
+    const { rows } = await pool.query(
+      `SELECT u.id
+       FROM users u
+       JOIN store_staff ss ON ss.user_id = u.id
+       WHERE ss.store_id = $1
+         AND ss.is_active = true
+         AND u.role IN ('owner', 'manager')`,
+      [storeId]
+    );
+    return rows.map((r) => r.id);
+  },
+
   async updateStaff(storeStaffId, { position, hourlyRate, canOpen, canClose, maxWeeklyHours, isActive }) {
     const { rows } = await pool.query(
       `UPDATE store_staff

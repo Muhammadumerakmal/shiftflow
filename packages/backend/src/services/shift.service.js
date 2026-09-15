@@ -1,6 +1,7 @@
 import { ShiftModel } from "../models/shift.model.js";
 import { StoreModel } from "../models/store.model.js";
 import { ActivityLogService } from "./activityLog.service.js";
+import { NotificationService } from "./notification.service.js";
 import { AppError } from "../middleware/errorHandler.middleware.js";
 
 export const ShiftService = {
@@ -113,6 +114,13 @@ export const ShiftService = {
     const end = new Date(start);
     end.setDate(end.getDate() + 7);
 
+    // Get affected staff before publishing (they're still in draft status)
+    const affectedUserIds = await ShiftModel.findAffectedUserIds(
+      storeId,
+      start.toISOString(),
+      end.toISOString()
+    );
+
     const published = await ShiftModel.publishDrafts(
       storeId,
       start.toISOString(),
@@ -127,7 +135,16 @@ export const ShiftService = {
       metadata: { weekStart, count: published.length },
     });
 
-    // TODO (V1.1): trigger notifications to affected staff
+    // Notify affected staff that the schedule has been published
+    const store = await StoreModel.findById(storeId);
+    for (const userId of affectedUserIds) {
+      await NotificationService.notify({
+        userId,
+        type: "shift_published",
+        title: "New schedule published",
+        body: `The schedule for ${store?.name || "your store"} has been published. Check your shifts.`,
+      }).catch(() => {}); // fire-and-forget
+    }
 
     return published;
   },

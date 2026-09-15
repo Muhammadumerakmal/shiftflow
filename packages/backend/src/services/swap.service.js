@@ -28,7 +28,15 @@ export const SwapService = {
       entityId: swap.id,
     });
 
-    // TODO (V1.1): notify offeredTo user, or broadcast to eligible staff if open to all
+    // Notify the offered-to user, or broadcast to all store staff if open to all
+    if (swap.offered_to) {
+      await NotificationService.notify({
+        userId: swap.offered_to,
+        type: "swap_request",
+        title: "New swap request",
+        body: `A colleague has requested to swap a shift with you.`,
+      }).catch(() => {});
+    }
 
     return swap;
   },

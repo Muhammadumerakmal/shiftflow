@@ -1,7 +1,7 @@
 import { UserModel } from "../models/user.model.js";
 import { StoreModel } from "../models/store.model.js";
 import { hashPassword, comparePassword } from "../utils/password.js";
-import { signAccessToken, signRefreshToken } from "../utils/jwt.js";
+import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
 import { AppError } from "../middleware/errorHandler.middleware.js";
 
 export const AuthService = {
@@ -48,7 +48,11 @@ export const AuthService = {
       throw new AppError("Invalid email or password", 401);
     }
 
-    const accessToken = signAccessToken({ id: user.id, role: user.role });
+    // Look up the user's store membership to include storeId in the token
+    const storeStaff = await StoreModel.findStaffByUserId(user.id);
+    const storeId = storeStaff?.store_id || null;
+
+    const accessToken = signAccessToken({ id: user.id, role: user.role, storeId });
     const refreshToken = signRefreshToken({ id: user.id });
 
     return {
@@ -57,9 +61,32 @@ export const AuthService = {
         fullName: user.full_name,
         email: user.email,
         role: user.role,
+        storeId,
       },
       accessToken,
       refreshToken,
     };
+  },
+
+  async refresh(refreshToken) {
+    let decoded;
+    try {
+      decoded = verifyRefreshToken(refreshToken);
+    } catch {
+      throw new AppError("Invalid or expired refresh token", 401);
+    }
+
+    const user = await UserModel.findById(decoded.id);
+    if (!user) {
+      throw new AppError("User no longer exists", 401);
+    }
+
+    const storeStaff = await StoreModel.findStaffByUserId(user.id);
+    const storeId = storeStaff?.store_id || null;
+
+    const newAccessToken = signAccessToken({ id: user.id, role: user.role, storeId });
+    const newRefreshToken = signRefreshToken({ id: user.id });
+
+    return { accessToken: newAccessToken, refreshToken: newRefreshToken };
   },
 };
