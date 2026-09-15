@@ -14,6 +14,7 @@ router.get("/:storeId", requireStoreAccess, StoreController.getStore);
 router.patch("/:storeId", requireRole("owner", "manager"), validate(updateStoreSchema), StoreController.updateStore);
 
 router.get("/:storeId/staff", requireStoreAccess, StoreController.getStaffList);
+router.get("/:storeId/staff/:staffId", requireStoreAccess, StoreController.getStaffById);
 router.post(
   "/:storeId/staff/invite",
   requireRole("owner", "manager"),

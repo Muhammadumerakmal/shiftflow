@@ -20,6 +20,12 @@ export const StoreService = {
     return StoreModel.getStaffList(storeId);
   },
 
+  async getStaffById(storeId, staffId) {
+    const staff = await StoreModel.getStaffById(storeId, staffId);
+    if (!staff) throw new AppError("Staff member not found", 404);
+    return staff;
+  },
+
   async inviteStaff({ storeId, phone, fullName, position, invitedBy }) {
     // Match existing user by phone, or create a new placeholder user
     let user = await UserModel.findByPhone(phone);

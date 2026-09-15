@@ -28,6 +28,15 @@ export const StoreController = {
     }
   },
 
+  async getStaffById(req, res, next) {
+    try {
+      const staff = await StoreService.getStaffById(req.params.storeId, req.params.staffId);
+      res.json({ success: true, data: staff });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async inviteStaff(req, res, next) {
     try {
       const { phone, fullName, position } = req.body;

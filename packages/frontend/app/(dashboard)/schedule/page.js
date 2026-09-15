@@ -7,7 +7,7 @@ import { api } from "../../../lib/api";
 function getWeekStart(date = new Date()) {
   const d = new Date(date);
   const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday as start
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   d.setDate(diff);
   d.setHours(0, 0, 0, 0);
   return d;
@@ -105,80 +105,94 @@ export default function SchedulePage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-text-primary">Weekly Schedule</h1>
-          <p className="text-sm text-text-secondary">
+          <h1 className="text-2xl font-bold text-text-primary tracking-tight">Weekly Schedule</h1>
+          <p className="text-sm text-text-muted mt-1">
             {weekStart.toDateString()} — {shiftDays()[6].toDateString()}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setWeekStart((w) => { const d = new Date(w); d.setDate(d.getDate() - 7); return d; })}
-            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-surface hover:bg-neutral"
+            className="px-3 py-2 text-sm border border-gray-200 rounded-xl bg-surface hover:bg-neutral transition"
           >
             ← Prev
           </button>
           <button
             onClick={() => setWeekStart((w) => { const d = new Date(w); d.setDate(d.getDate() + 7); return d; })}
-            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-surface hover:bg-neutral"
+            className="px-3 py-2 text-sm border border-gray-200 rounded-xl bg-surface hover:bg-neutral transition"
           >
             Next →
           </button>
           <button
             onClick={() => setShowForm(true)}
-            className="px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary-light"
+            className="px-4 py-2 text-sm font-medium text-white rounded-xl shadow-[0_4px_14px_rgba(91,141,239,0.3)] transition hover:opacity-90"
+            style={{ background: "linear-gradient(135deg, #5B8DEF, #9B7BFF)" }}
           >
             + New Shift
           </button>
           {draftCount > 0 && (
             <button
               onClick={handlePublish}
-              className="px-3 py-1.5 text-sm bg-success text-white rounded-lg hover:opacity-90"
+              className="px-4 py-2 text-sm font-medium bg-success text-white rounded-xl hover:opacity-90 transition shadow-[0_4px_14px_rgba(46,125,50,0.2)]"
             >
-              Publish ({draftCount} draft{draftCount > 1 ? "s" : ""})
+              Publish ({draftCount})
             </button>
           )}
         </div>
       </div>
 
-      {error && <div className="bg-danger-bg text-danger text-sm rounded-lg px-3 py-2 mb-4">{error}</div>}
+      {error && (
+        <div className="bg-danger-bg text-danger text-sm rounded-xl px-4 py-2.5 mb-4 border border-danger/10">
+          {error}
+        </div>
+      )}
 
       {loading ? (
-        <p className="text-text-secondary text-sm">Loading schedule…</p>
+        <div className="flex items-center justify-center py-20 text-text-muted">Loading schedule...</div>
       ) : (
-        <div className="bg-surface rounded-xl shadow-sm overflow-x-auto">
+        <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-x-auto border border-gray-100">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100">
-                <th className="text-left px-4 py-3 font-medium text-text-secondary w-40">Staff</th>
+                <th className="text-left px-5 py-4 font-medium text-text-muted w-40">Staff</th>
                 {shiftDays().map((d, i) => (
-                  <th key={i} className="text-left px-3 py-3 font-medium text-text-secondary">
-                    {DAY_LABELS[i]} <span className="font-normal">{d.getDate()}</span>
+                  <th key={i} className="text-left px-3 py-4 font-medium text-text-muted">
+                    <div>{DAY_LABELS[i]}</div>
+                    <div className="text-xs font-normal">{d.getDate()}</div>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {staff.map((member) => (
-                <tr key={member.user_id} className="border-b border-gray-50">
-                  <td className="px-4 py-3 font-medium text-text-primary">{member.full_name}</td>
+                <tr key={member.user_id} className="border-b border-gray-50 last:border-0">
+                  <td className="px-5 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center text-xs font-semibold">
+                        {member.full_name?.charAt(0)}
+                      </div>
+                      <span className="font-medium text-text-primary">{member.full_name}</span>
+                    </div>
+                  </td>
                   {shiftDays().map((day, i) => {
                     const dayShifts = shiftsFor(member.user_id, day);
                     return (
-                      <td key={i} className="px-3 py-3 align-top">
+                      <td key={i} className="px-2 py-2 align-top">
                         {dayShifts.map((s) => (
                           <div
                             key={s.id}
-                            className={`rounded-md px-2 py-1 mb-1 text-xs ${
+                            className={`rounded-lg px-2.5 py-1.5 mb-1 text-xs transition-all hover:scale-[1.02] ${
                               s.status === "published"
                                 ? "bg-success-bg text-success border border-success/20"
                                 : "bg-gray-50 text-gray-600 border border-gray-200"
                             }`}
                           >
-                            {new Date(s.starts_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}–
-                            {new Date(s.ends_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-                            <div className="text-[10px] opacity-70">{s.position}</div>
+                            <div className="font-medium">
+                              {new Date(s.starts_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} – {new Date(s.ends_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                            </div>
+                            {s.position && <div className="text-[10px] opacity-70 mt-0.5">{s.position}</div>}
                           </div>
                         ))}
                       </td>
@@ -192,17 +206,17 @@ export default function SchedulePage() {
       )}
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <form onSubmit={handleCreateShift} className="bg-surface rounded-xl p-6 w-full max-w-sm space-y-3">
-            <h2 className="font-semibold text-text-primary">New Shift</h2>
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+          <form onSubmit={handleCreateShift} className="bg-surface rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-[0_24px_60px_rgba(0,0,0,0.15)]">
+            <h2 className="font-bold text-lg text-text-primary">New Shift</h2>
 
             <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1">Staff</label>
+              <label className="block text-xs font-medium text-text-secondary mb-1.5">Staff</label>
               <select
                 required
                 value={form.userId}
                 onChange={(e) => setForm({ ...form, userId: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition"
               >
                 <option value="">Select staff</option>
                 {staff.map((s) => (
@@ -212,11 +226,11 @@ export default function SchedulePage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1">Day</label>
+              <label className="block text-xs font-medium text-text-secondary mb-1.5">Day</label>
               <select
                 value={form.day}
                 onChange={(e) => setForm({ ...form, day: Number(e.target.value) })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition"
               >
                 {DAY_LABELS.map((label, i) => (
                   <option key={i} value={i}>{label}</option>
@@ -226,41 +240,41 @@ export default function SchedulePage() {
 
             <div className="flex gap-2">
               <div className="flex-1">
-                <label className="block text-xs font-medium text-text-secondary mb-1">Start</label>
+                <label className="block text-xs font-medium text-text-secondary mb-1.5">Start</label>
                 <input
                   type="time"
                   value={form.startTime}
                   onChange={(e) => setForm({ ...form, startTime: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition"
                 />
               </div>
               <div className="flex-1">
-                <label className="block text-xs font-medium text-text-secondary mb-1">End</label>
+                <label className="block text-xs font-medium text-text-secondary mb-1.5">End</label>
                 <input
                   type="time"
                   value={form.endTime}
                   onChange={(e) => setForm({ ...form, endTime: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1">Position</label>
+              <label className="block text-xs font-medium text-text-secondary mb-1.5">Position</label>
               <input
                 type="text"
                 value={form.position}
                 onChange={(e) => setForm({ ...form, position: e.target.value })}
-                placeholder="Cashier, Manager…"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                placeholder="Cashier, Manager..."
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition"
               />
             </div>
 
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-gray-200 rounded-lg py-2 text-sm">
+              <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm font-medium hover:bg-neutral transition">
                 Cancel
               </button>
-              <button type="submit" className="flex-1 bg-primary text-white rounded-lg py-2 text-sm">
+              <button type="submit" className="flex-1 text-white rounded-xl py-2.5 text-sm font-medium shadow-[0_4px_14px_rgba(91,141,239,0.3)] transition hover:opacity-90" style={{ background: "linear-gradient(135deg, #5B8DEF, #9B7BFF)" }}>
                 Save
               </button>
             </div>

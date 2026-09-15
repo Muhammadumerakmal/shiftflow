@@ -83,6 +83,30 @@ export const StoreModel = {
     return rows[0] || null;
   },
 
+  async getStaffById(storeId, storeStaffId) {
+    const { rows } = await pool.query(
+      `SELECT
+         ss.id AS store_staff_id,
+         ss.position,
+         ss.hourly_rate,
+         ss.can_open,
+         ss.can_close,
+         ss.max_weekly_hours,
+         ss.is_active,
+         u.id AS user_id,
+         u.full_name,
+         u.email,
+         u.phone,
+         u.role,
+         u.avatar_url
+       FROM store_staff ss
+       JOIN users u ON u.id = ss.user_id
+       WHERE ss.store_id = $1 AND ss.id = $2`,
+      [storeId, storeStaffId]
+    );
+    return rows[0] || null;
+  },
+
   // Get manager/owner user IDs for a store (for sending notifications)
   async getManagerUserIds(storeId) {
     const { rows } = await pool.query(
