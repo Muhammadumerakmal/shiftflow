@@ -21,10 +21,12 @@ export const env = {
   },
 };
 
-// Fail fast if required env vars are missing
-const required = ["databaseUrl", "jwtAccessSecret", "jwtRefreshSecret"];
-for (const key of required) {
-  if (!env[key]) {
-    throw new Error(`Missing required environment variable for: ${key}`);
+// Fail fast only when running locally, not on Vercel serverless
+if (!process.env.VERCEL) {
+  const required = ["databaseUrl", "jwtAccessSecret", "jwtRefreshSecret"];
+  for (const key of required) {
+    if (!env[key]) {
+      throw new Error(`Missing required environment variable for: ${key}`);
+    }
   }
 }

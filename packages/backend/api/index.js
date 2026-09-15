@@ -1,4 +1,11 @@
 import app from "../src/app.js";
 
-// Vercel serverless: export the Express app directly
-export default app;
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+export default function handler(req, res) {
+  return app(req, res);
+}
