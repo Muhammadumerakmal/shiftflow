@@ -68,6 +68,24 @@ export const AuthService = {
     };
   },
 
+  async me(userId) {
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+    const store = await StoreModel.findStoreByUserId(userId);
+    return {
+      id: user.id,
+      fullName: user.full_name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      avatarUrl: user.avatar_url,
+      storeId: store?.id || null,
+      storeName: store?.name || null,
+    };
+  },
+
   async refresh(refreshToken) {
     let decoded;
     try {

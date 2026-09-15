@@ -34,6 +34,13 @@ export const api = {
     request("/auth/login", { method: "POST", body: { email, password }, auth: false }),
   register: (payload) =>
     request("/auth/register", { method: "POST", body: payload, auth: false }),
+  getMe: () => request("/auth/me"),
+
+  // OTP (Staff login)
+  requestOtp: (phone) =>
+    request("/auth/otp/request", { method: "POST", body: { phone }, auth: false }),
+  verifyOtp: (phone, code) =>
+    request("/auth/otp/verify", { method: "POST", body: { phone, code }, auth: false }),
 
   // Store & Staff
   getStore: (storeId) => request(`/stores/${storeId}`),

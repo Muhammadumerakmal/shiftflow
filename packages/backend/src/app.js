@@ -2,10 +2,13 @@ import express from "express";
 import cors from "cors";
 import routes from "./routes/index.js";
 import { errorHandler } from "./middleware/errorHandler.middleware.js";
+import { env } from "./config/env.js";
 
 const app = express();
 
-const allowedOrigins = [
+const isProd = env.nodeEnv === "production";
+
+const configuredOrigins = env.allowedOrigins || [
   "https://shiftflow-frontend-ten.vercel.app",
   "http://localhost:3000",
 ];
@@ -13,7 +16,8 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!isProd) return callback(null, true);
+      if (!origin || configuredOrigins.includes(origin)) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));

@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "../lib/auth-context";
+import NotificationBell from "./NotificationBell";
 
 const NAV_ITEMS = [
+  { href: "/dashboard", label: "Dashboard", icon: "🏠" },
   { href: "/schedule", label: "Schedule", icon: "📅" },
   { href: "/swap-requests", label: "Swaps", icon: "🔄" },
   { href: "/time-off", label: "Time Off", icon: "🏖️" },
@@ -18,8 +20,8 @@ export default function Sidebar() {
 
   return (
     <aside className="w-56 bg-surface border-r border-gray-100 flex flex-col h-screen sticky top-0">
-      <div className="px-4 py-4 border-b border-gray-100">
-        <Link href="/" className="flex items-center gap-2.5">
+      <div className="px-4 py-4 border-b border-gray-100 flex items-center justify-between">
+        <Link href="/dashboard" className="flex items-center gap-2.5">
           <div
             className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-md"
             style={{ background: "linear-gradient(135deg, #5B8DEF, #9B7BFF)" }}
@@ -28,6 +30,7 @@ export default function Sidebar() {
           </div>
           <span className="font-semibold text-text-primary">ShiftFlow</span>
         </Link>
+        <NotificationBell />
       </div>
 
       <nav className="flex-1 px-2 py-3 space-y-1">

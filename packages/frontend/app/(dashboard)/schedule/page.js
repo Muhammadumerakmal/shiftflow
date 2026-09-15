@@ -28,6 +28,8 @@ export default function SchedulePage() {
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ userId: "", day: 0, startTime: "09:00", endTime: "17:00", position: "" });
+  const [editingShift, setEditingShift] = useState(null);
+  const [editForm, setEditForm] = useState({ userId: "", day: 0, startTime: "09:00", endTime: "17:00", position: "" });
 
   const load = useCallback(async () => {
     if (!storeId) return;
@@ -67,6 +69,23 @@ export default function SchedulePage() {
     });
   }
 
+  function openEditModal(shift) {
+    const shiftDate = new Date(shift.starts_at);
+    const dayIndex = shiftDays().findIndex((d) => d.toDateString() === shiftDate.toDateString());
+    const startTime = shiftDate.toTimeString().slice(0, 5);
+    const endDate = new Date(shift.ends_at);
+    const endTime = endDate.toTimeString().slice(0, 5);
+
+    setEditingShift(shift);
+    setEditForm({
+      userId: shift.user_id,
+      day: dayIndex >= 0 ? dayIndex : 0,
+      startTime,
+      endTime,
+      position: shift.position || "",
+    });
+  }
+
   async function handleCreateShift(e) {
     e.preventDefault();
     const day = shiftDays()[form.day];
@@ -92,6 +111,41 @@ export default function SchedulePage() {
     }
   }
 
+  async function handleUpdateShift(e) {
+    e.preventDefault();
+    const day = shiftDays()[editForm.day];
+    const startsAt = new Date(day);
+    const [sh, sm] = editForm.startTime.split(":");
+    startsAt.setHours(Number(sh), Number(sm), 0, 0);
+    const endsAt = new Date(day);
+    const [eh, em] = editForm.endTime.split(":");
+    endsAt.setHours(Number(eh), Number(em), 0, 0);
+
+    try {
+      await api.updateShift(editingShift.id, {
+        userId: editForm.userId,
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString(),
+        position: editForm.position,
+      });
+      setEditingShift(null);
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function handleDeleteShift() {
+    if (!confirm("Delete this shift?")) return;
+    try {
+      await api.deleteShift(editingShift.id);
+      setEditingShift(null);
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   async function handlePublish() {
     try {
       await api.publishWeek(storeId, formatDate(weekStart));
@@ -102,6 +156,86 @@ export default function SchedulePage() {
   }
 
   const draftCount = shifts.filter((s) => s.status === "draft").length;
+
+  function renderShiftModal(title, formData, setFormData, onSubmit, submitLabel, extraButtons) {
+    return (
+      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+        <form onSubmit={onSubmit} className="bg-surface rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-[0_24px_60px_rgba(0,0,0,0.15)]">
+          <h2 className="font-bold text-lg text-text-primary">{title}</h2>
+
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">Staff</label>
+            <select
+              required
+              value={formData.userId}
+              onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition"
+            >
+              <option value="">Select staff</option>
+              {staff.map((s) => (
+                <option key={s.user_id} value={s.user_id}>{s.full_name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">Day</label>
+            <select
+              value={formData.day}
+              onChange={(e) => setFormData({ ...formData, day: Number(e.target.value) })}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition"
+            >
+              {DAY_LABELS.map((label, i) => (
+                <option key={i} value={i}>{label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-text-secondary mb-1.5">Start</label>
+              <input
+                type="time"
+                value={formData.startTime}
+                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-text-secondary mb-1.5">End</label>
+              <input
+                type="time"
+                value={formData.endTime}
+                onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">Position</label>
+            <input
+              type="text"
+              value={formData.position}
+              onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+              placeholder="Cashier, Manager..."
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition"
+            />
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <button type="button" onClick={() => { setShowForm(false); setEditingShift(null); }} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm font-medium hover:bg-neutral transition">
+              Cancel
+            </button>
+            {extraButtons}
+            <button type="submit" className="flex-1 text-white rounded-xl py-2.5 text-sm font-medium shadow-[0_4px_14px_rgba(91,141,239,0.3)] transition hover:opacity-90" style={{ background: "linear-gradient(135deg, #5B8DEF, #9B7BFF)" }}>
+              {submitLabel}
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -181,9 +315,10 @@ export default function SchedulePage() {
                     return (
                       <td key={i} className="px-2 py-2 align-top">
                         {dayShifts.map((s) => (
-                          <div
+                          <button
                             key={s.id}
-                            className={`rounded-lg px-2.5 py-1.5 mb-1 text-xs transition-all hover:scale-[1.02] ${
+                            onClick={() => openEditModal(s)}
+                            className={`w-full text-left rounded-lg px-2.5 py-1.5 mb-1 text-xs transition-all hover:scale-[1.02] cursor-pointer ${
                               s.status === "published"
                                 ? "bg-success-bg text-success border border-success/20"
                                 : "bg-gray-50 text-gray-600 border border-gray-200"
@@ -193,7 +328,7 @@ export default function SchedulePage() {
                               {new Date(s.starts_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} – {new Date(s.ends_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
                             </div>
                             {s.position && <div className="text-[10px] opacity-70 mt-0.5">{s.position}</div>}
-                          </div>
+                          </button>
                         ))}
                       </td>
                     );
@@ -205,81 +340,24 @@ export default function SchedulePage() {
         </div>
       )}
 
-      {showForm && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
-          <form onSubmit={handleCreateShift} className="bg-surface rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-[0_24px_60px_rgba(0,0,0,0.15)]">
-            <h2 className="font-bold text-lg text-text-primary">New Shift</h2>
+      {showForm && renderShiftModal(
+        "New Shift",
+        form,
+        setForm,
+        handleCreateShift,
+        "Save",
+        null
+      )}
 
-            <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1.5">Staff</label>
-              <select
-                required
-                value={form.userId}
-                onChange={(e) => setForm({ ...form, userId: e.target.value })}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition"
-              >
-                <option value="">Select staff</option>
-                {staff.map((s) => (
-                  <option key={s.user_id} value={s.user_id}>{s.full_name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1.5">Day</label>
-              <select
-                value={form.day}
-                onChange={(e) => setForm({ ...form, day: Number(e.target.value) })}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition"
-              >
-                {DAY_LABELS.map((label, i) => (
-                  <option key={i} value={i}>{label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <label className="block text-xs font-medium text-text-secondary mb-1.5">Start</label>
-                <input
-                  type="time"
-                  value={form.startTime}
-                  onChange={(e) => setForm({ ...form, startTime: e.target.value })}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition"
-                />
-              </div>
-              <div className="flex-1">
-                <label className="block text-xs font-medium text-text-secondary mb-1.5">End</label>
-                <input
-                  type="time"
-                  value={form.endTime}
-                  onChange={(e) => setForm({ ...form, endTime: e.target.value })}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1.5">Position</label>
-              <input
-                type="text"
-                value={form.position}
-                onChange={(e) => setForm({ ...form, position: e.target.value })}
-                placeholder="Cashier, Manager..."
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition"
-              />
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm font-medium hover:bg-neutral transition">
-                Cancel
-              </button>
-              <button type="submit" className="flex-1 text-white rounded-xl py-2.5 text-sm font-medium shadow-[0_4px_14px_rgba(91,141,239,0.3)] transition hover:opacity-90" style={{ background: "linear-gradient(135deg, #5B8DEF, #9B7BFF)" }}>
-                Save
-              </button>
-            </div>
-          </form>
-        </div>
+      {editingShift && renderShiftModal(
+        "Edit Shift",
+        editForm,
+        setEditForm,
+        handleUpdateShift,
+        "Save Changes",
+        <button type="button" onClick={handleDeleteShift} className="flex-1 bg-danger/10 text-danger rounded-xl py-2.5 text-sm font-medium hover:bg-danger/20 transition">
+          Delete
+        </button>
       )}
     </div>
   );

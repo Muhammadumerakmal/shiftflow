@@ -15,20 +15,44 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
     const savedStoreId = localStorage.getItem("storeId");
+    const token = localStorage.getItem("accessToken");
+
     if (savedUser) setUser(JSON.parse(savedUser));
-    if (savedStoreId) setStoreId(savedStoreId);
-    setLoading(false);
+    if (savedStoreId) {
+      setStoreId(savedStoreId);
+      setLoading(false);
+    } else if (token) {
+      api.getMe().then((me) => {
+        if (me.storeId) {
+          localStorage.setItem("storeId", me.storeId);
+          setStoreId(me.storeId);
+        }
+        setUser(me);
+        localStorage.setItem("user", JSON.stringify(me));
+      }).catch(() => {}).finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   async function login(email, password) {
     const result = await api.login(email, password);
     localStorage.setItem("accessToken", result.accessToken);
     localStorage.setItem("user", JSON.stringify(result.user));
+    setUser(result.user);
+
     if (result.user.storeId) {
       localStorage.setItem("storeId", result.user.storeId);
       setStoreId(result.user.storeId);
+    } else {
+      const me = await api.getMe();
+      if (me.storeId) {
+        localStorage.setItem("storeId", me.storeId);
+        setStoreId(me.storeId);
+      }
+      setUser(me);
+      localStorage.setItem("user", JSON.stringify(me));
     }
-    setUser(result.user);
     return result;
   }
 

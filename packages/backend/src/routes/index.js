@@ -1,5 +1,6 @@
 import { Router } from "express";
 import authRoutes from "./auth.routes.js";
+import otpRoutes from "./otp.routes.js";
 import storeRoutes from "./store.routes.js";
 import shiftRoutes from "./shift.routes.js";
 import swapRoutes from "./swap.routes.js";
@@ -11,6 +12,7 @@ import aiRoutes from "./ai.routes.js";
 const router = Router();
 
 router.use("/auth", authRoutes);
+router.use("/auth/otp", otpRoutes);
 router.use("/stores", storeRoutes);
 router.use("/", shiftRoutes); // shift routes define their own /stores/:storeId/shifts and /shifts/:id paths
 router.use("/", swapRoutes);  // swap routes define their own /shifts/:id/swap-request and /swap-requests/:id paths

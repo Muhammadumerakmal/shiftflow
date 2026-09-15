@@ -72,6 +72,8 @@ Route -> Middleware (auth/validation) -> Controller -> Service -> Model -> Datab
 - Store-scoping middleware
 - Zod input validation
 - Bcrypt password hashing (10 rounds)
+- CORS restricted to `ALLOWED_ORIGINS` in production (allows all in development)
+- Rate limiting on auth endpoints (10 requests / 15 min per IP)
 
 ### API Endpoints
 
@@ -80,6 +82,7 @@ Base URL: `/api/v1`
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | **Auth** | | | |
+| GET | `/auth/me` | Yes | Get current user + storeId |
 | POST | `/auth/register` | No | Register owner + create store |
 | POST | `/auth/login` | No | Login, get tokens |
 | POST | `/auth/refresh` | No | Refresh access token |

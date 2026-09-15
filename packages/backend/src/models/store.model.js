@@ -83,6 +83,18 @@ export const StoreModel = {
     return rows[0] || null;
   },
 
+  async findStoreByUserId(userId) {
+    const { rows } = await pool.query(
+      `SELECT s.id, s.name, s.created_at
+       FROM stores s
+       JOIN store_staff ss ON ss.store_id = s.id
+       WHERE ss.user_id = $1 AND ss.is_active = true
+       LIMIT 1`,
+      [userId]
+    );
+    return rows[0] || null;
+  },
+
   async getStaffById(storeId, storeStaffId) {
     const { rows } = await pool.query(
       `SELECT

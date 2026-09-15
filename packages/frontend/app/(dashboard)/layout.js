@@ -12,6 +12,7 @@ export default function DashboardLayout({ children }) {
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
+    if (!loading && user?.role === "staff") router.push("/my-schedule");
   }, [loading, user, router]);
 
   if (loading || !user) {

@@ -11,7 +11,7 @@ export default function RootPage() {
 
   useEffect(() => {
     if (loading) return;
-    if (user) router.push("/schedule");
+    if (user) router.push("/dashboard");
   }, [user, loading, router]);
 
   if (loading) {
