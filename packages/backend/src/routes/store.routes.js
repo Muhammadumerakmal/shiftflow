@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { StoreController } from "../controllers/store.controller.js";
+import { AiController } from "../controllers/ai.controller.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { requireRole, requireStoreAccess } from "../middleware/storeAccess.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
@@ -27,5 +28,8 @@ router.patch(
   validate(updateStaffSchema),
   StoreController.updateStaff
 );
+
+// AI agent — store-scoped
+router.post("/:storeId/ai/chat", AiController.chat);
 
 export default router;
