@@ -61,7 +61,7 @@ Route -> Middleware (auth/validation) -> Controller -> Service -> Model -> Datab
 - ✅ **Time-off** — request/list/approve/deny, overlap detection
 - ✅ **Attendance** — clock in/out, variance tracking, CSV export
 - ✅ **Notifications** — in-app + email, wired to shifts, swaps, time-off
-- ✅ **AI agent** — OpenAI function-calling agent with read/write tools for schedule, swaps, time-off
+- ✅ **AI agent** — Gemini-powered agent using OpenAI Agents SDK (Chat Completions) with read/write tools for schedule, swaps, time-off
 - ✅ **Input validation** — Zod schemas on all mutation endpoints
 - ✅ **Store-scoping** — staff can only access their own store data
 

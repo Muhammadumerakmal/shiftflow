@@ -1,3 +1,5 @@
+import { Agent, Runner, setOpenAIAPI, OpenAIChatCompletionsModel } from "@openai/agents";
+import OpenAI from "openai";
 import { env } from "../config/env.js";
 import { ShiftModel } from "../models/shift.model.js";
 import { StoreModel } from "../models/store.model.js";
@@ -7,7 +9,17 @@ import { AttendanceModel } from "../models/attendance.model.js";
 import { SwapService } from "../services/swap.service.js";
 import { TimeOffService } from "../services/timeOff.service.js";
 
-const OPENAI_BASE = "https://api.openai.com/v1";
+// Use Chat Completions API (Gemini doesn't support Responses API)
+setOpenAIAPI("chat_completions");
+
+const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai";
+
+function getGeminiClient() {
+  return new OpenAI({
+    apiKey: env.gemini.apiKey,
+    baseURL: GEMINI_BASE_URL,
+  });
+}
 
 const SYSTEM_PROMPT = `You are Flow, the ShiftFlow AI assistant for store managers.
 You help manage shifts, staff, swap requests, and time-off requests.
@@ -17,7 +29,7 @@ Be concise, friendly, and confirm before making any changes that create, approve
 When asked about schedule coverage, use the tools to check who is actually scheduled.
 Never invent data — always use the tools to get real information.`;
 
-// ── Tool definitions ──────────────────────────────────────────────
+// ── Tool definitions (OpenAI function calling format) ─────────────
 
 const TOOLS = [
   {
@@ -169,7 +181,7 @@ const TOOLS = [
   },
 ];
 
-// ── Tool execution ────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────
 
 function getWeekStart(dateStr) {
   if (dateStr) {
@@ -199,41 +211,34 @@ function parseDateToStartEnd(dateStr) {
   return { start: d.toISOString(), end: end.toISOString() };
 }
 
+// ── Tool execution ────────────────────────────────────────────────
+
 async function executeTool(toolName, args, storeId, userId) {
   try {
     switch (toolName) {
       case "getSchedule": {
         const ws = getWeekStart(args.weekStart);
         const we = getWeekEnd(ws);
-        const shifts = await ShiftModel.findByStoreAndRange(storeId, ws, we);
-        return JSON.stringify(shifts);
+        return await ShiftModel.findByStoreAndRange(storeId, ws, we);
       }
-      case "getStaffList": {
-        const staff = await StoreModel.getStaffList(storeId);
-        return JSON.stringify(staff);
-      }
-      case "getSwaps": {
-        const swaps = await SwapModel.findByStore(storeId, args.status);
-        return JSON.stringify(swaps);
-      }
-      case "getTimeOff": {
-        const requests = await TimeOffModel.findByStore(storeId, args.status);
-        return JSON.stringify(requests);
-      }
+      case "getStaffList":
+        return await StoreModel.getStaffList(storeId);
+      case "getSwaps":
+        return await SwapModel.findByStore(storeId, args.status);
+      case "getTimeOff":
+        return await TimeOffModel.findByStore(storeId, args.status);
       case "getAttendance": {
         const date = args.date || new Date().toISOString().split("T")[0];
         const { start, end } = parseDateToStartEnd(date);
-        const records = await AttendanceModel.findByStoreAndRange(storeId, start, end);
-        return JSON.stringify(records);
+        return await AttendanceModel.findByStoreAndRange(storeId, start, end);
       }
       case "whoIsWorking": {
-        if (!args.date) return JSON.stringify({ error: "date is required" });
+        if (!args.date) return { error: "date is required" };
         const ws = getWeekStart(args.date);
         const we = getWeekEnd(ws);
         const shifts = await ShiftModel.findByStoreAndRange(storeId, ws, we);
         const target = new Date(args.date + "T00:00:00Z").toDateString();
-        const working = shifts.filter((s) => new Date(s.starts_at).toDateString() === target);
-        return JSON.stringify(working);
+        return shifts.filter((s) => new Date(s.starts_at).toDateString() === target);
       }
       case "createShift": {
         const shift = await ShiftModel.create({
@@ -243,37 +248,55 @@ async function executeTool(toolName, args, storeId, userId) {
           endsAt: args.endsAt,
           position: args.position || null,
         });
-        return JSON.stringify({ message: "Draft shift created", shift });
+        return { message: "Draft shift created", shift };
       }
-      case "approveSwap": {
-        const result = await SwapService.approveSwap(args.swapId, userId);
-        return JSON.stringify({ message: "Swap approved", swap: result });
-      }
-      case "rejectSwap": {
-        const result = await SwapService.rejectSwap(args.swapId, userId);
-        return JSON.stringify({ message: "Swap rejected", swap: result });
-      }
-      case "approveTimeOff": {
-        const result = await TimeOffService.approveTimeOff(args.requestId, userId);
-        return JSON.stringify({ message: "Time-off approved", request: result });
-      }
-      case "denyTimeOff": {
-        const result = await TimeOffService.denyTimeOff(args.requestId, userId);
-        return JSON.stringify({ message: "Time-off denied", request: result });
-      }
+      case "approveSwap":
+        return await SwapService.approveSwap(args.swapId, userId);
+      case "rejectSwap":
+        return await SwapService.rejectSwap(args.swapId, userId);
+      case "approveTimeOff":
+        return await TimeOffService.approveTimeOff(args.requestId, userId);
+      case "denyTimeOff":
+        return await TimeOffService.denyTimeOff(args.requestId, userId);
       default:
-        return JSON.stringify({ error: `Unknown tool: ${toolName}` });
+        return { error: `Unknown tool: ${toolName}` };
     }
   } catch (err) {
-    return JSON.stringify({ error: err.message });
+    return { error: err.message };
   }
 }
 
-// ── OpenAI agent loop ─────────────────────────────────────────────
+// ── Agent setup ───────────────────────────────────────────────────
+
+function createAgent(storeId, userId) {
+  const client = getGeminiClient();
+  const model = new OpenAIChatCompletionsModel(client, env.gemini.model || "gemini-2.0-flash");
+
+  const agent = new Agent({
+    name: "Flow",
+    instructions: SYSTEM_PROMPT,
+    model,
+    tools: TOOLS.map((t) => ({
+      ...t,
+      function: {
+        ...t.function,
+        // Wrap execute to inject storeId/userId context
+        execute: async (args) => {
+          const result = await executeTool(t.function.name, args, storeId, userId);
+          return JSON.stringify(result);
+        },
+      },
+    })),
+  });
+
+  return agent;
+}
+
+// ── Main entry point ──────────────────────────────────────────────
 
 export async function agentChat({ message, history = [], storeId, userId }) {
-  if (!env.openai.apiKey) {
-    const err = new Error("AI is not configured (missing OPENAI_API_KEY).");
+  if (!env.gemini.apiKey) {
+    const err = new Error("AI is not configured (missing GEMINI_API_KEY).");
     err.status = 503;
     throw err;
   }
@@ -283,61 +306,24 @@ export async function agentChat({ message, history = [], storeId, userId }) {
     throw err;
   }
 
-  const messages = [
-    { role: "system", content: SYSTEM_PROMPT },
-    ...history.map((t) => ({ role: t.role === "assistant" ? "assistant" : "user", content: t.text })),
+  const agent = createAgent(storeId, userId);
+
+  // Convert history to the SDK's input format
+  const input = [
+    ...history.map((t) => ({
+      role: t.role === "assistant" ? "assistant" : "user",
+      content: t.text,
+    })),
     { role: "user", content: message },
   ];
 
-  for (let round = 0; round < 5; round++) {
-    const res = await fetch(`${OPENAI_BASE}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${env.openai.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: env.openai.model,
-        messages,
-        tools: TOOLS,
-        tool_choice: "auto",
-        temperature: 0.3,
-      }),
-    });
+  const result = await Runner.run(agent, input, {
+    maxTurns: 6,
+  });
 
-    if (!res.ok) {
-      const detail = await res.text().catch(() => "");
-      const err = new Error(`OpenAI request failed (${res.status}): ${detail.slice(0, 500)}`);
-      err.status = 502;
-      throw err;
-    }
-
-    const data = await res.json();
-    const choice = data.choices?.[0];
-    if (!choice) {
-      const err = new Error("OpenAI returned no choices.");
-      err.status = 502;
-      throw err;
-    }
-
-    const assistantMessage = choice.message;
-    messages.push(assistantMessage);
-
-    if (!assistantMessage.tool_calls?.length) {
-      return assistantMessage.content || "";
-    }
-
-    for (const tc of assistantMessage.tool_calls) {
-      const args = JSON.parse(tc.function.arguments || "{}");
-      const result = await executeTool(tc.function.name, args, storeId, userId);
-      messages.push({
-        role: "tool",
-        tool_call_id: tc.id,
-        content: result,
-      });
-    }
-  }
-
-  const last = messages[messages.length - 1];
-  return last?.content || "I wasn't able to complete that request.";
+  // Extract final text output
+  const finalOutput = result.finalOutput;
+  if (typeof finalOutput === "string") return finalOutput;
+  if (finalOutput?.content) return finalOutput.content;
+  return "I wasn't able to complete that request.";
 }

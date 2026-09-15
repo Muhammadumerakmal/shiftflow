@@ -13,11 +13,7 @@ export const env = {
     : null,
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || null,
-    model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
-  },
-  openai: {
-    apiKey: process.env.OPENAI_API_KEY || null,
-    model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    model: process.env.GEMINI_MODEL || "gemini-2.0-flash",
   },
   smtp: {
     host: process.env.SMTP_HOST || null,
