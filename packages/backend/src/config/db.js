@@ -14,5 +14,7 @@ pool
   .then(() => logger.info("Connected to Neon Postgres"))
   .catch((err) => {
     logger.error({ err }, "Database connection failed");
-    process.exit(1);
+    if (!process.env.VERCEL) {
+      process.exit(1);
+    }
   });
