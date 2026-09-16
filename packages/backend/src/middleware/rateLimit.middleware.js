@@ -1,9 +1,21 @@
 // Simple in-memory rate limiter (resets on cold start — fine for MVP)
 const attempts = new Map();
 
-export function rateLimit({ windowMs = 15 * 60 * 1000, max = 10 } = {}) {
+function getKey(req, keyType) {
+  switch (keyType) {
+    case "user":
+      return req.user?.id || req.ip || req.connection.remoteAddress;
+    case "phone":
+      return req.body?.phone || req.ip || req.connection.remoteAddress;
+    case "ip":
+    default:
+      return req.ip || req.connection.remoteAddress;
+  }
+}
+
+export function rateLimit({ windowMs = 15 * 60 * 1000, max = 10, keyType = "ip" } = {}) {
   return (req, res, next) => {
-    const key = req.ip || req.connection.remoteAddress;
+    const key = getKey(req, keyType);
     const now = Date.now();
 
     if (!attempts.has(key)) {

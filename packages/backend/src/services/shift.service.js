@@ -3,6 +3,13 @@ import { StoreModel } from "../models/store.model.js";
 import { ActivityLogService } from "./activityLog.service.js";
 import { NotificationService } from "./notification.service.js";
 import { AppError } from "../middleware/errorHandler.middleware.js";
+import { cacheGet, cacheSet, cacheDelete } from "../utils/cache.js";
+
+const WEEK_SCHEDULE_TTL = 30 * 1000; // 30 seconds
+
+function weekScheduleCacheKey(storeId, weekStart) {
+  return `shifts:week:${storeId}:${weekStart}`;
+}
 
 export const ShiftService = {
   async createShift({ storeId, userId, startsAt, endsAt, position, notes, createdBy }) {
@@ -41,15 +48,22 @@ export const ShiftService = {
       metadata: { startsAt, endsAt, position },
     });
 
+    cacheDelete(weekScheduleCacheKey(storeId, startsAt.split("T")[0]));
     return shift;
   },
 
   async getWeekSchedule(storeId, weekStart) {
+    const cacheKey = weekScheduleCacheKey(storeId, weekStart);
+    const cached = cacheGet(cacheKey);
+    if (cached) return cached;
+
     const start = new Date(weekStart);
     const end = new Date(start);
     end.setDate(end.getDate() + 7);
 
-    return ShiftModel.findByStoreAndRange(storeId, start.toISOString(), end.toISOString());
+    const shifts = await ShiftModel.findByStoreAndRange(storeId, start.toISOString(), end.toISOString());
+    cacheSet(cacheKey, shifts, WEEK_SCHEDULE_TTL);
+    return shifts;
   },
 
   async updateShift(shiftId, updates, updatedBy) {
@@ -89,6 +103,7 @@ export const ShiftService = {
       metadata: updates,
     });
 
+    cacheDelete(weekScheduleCacheKey(existing.store_id, existing.starts_at.split("T")[0]));
     return shift;
   },
 
@@ -106,6 +121,7 @@ export const ShiftService = {
       entityId: shiftId,
     });
 
+    cacheDelete(weekScheduleCacheKey(existing.store_id, existing.starts_at.split("T")[0]));
     return { id: shiftId };
   },
 
@@ -146,6 +162,7 @@ export const ShiftService = {
       }).catch(() => {}); // fire-and-forget
     }
 
+    cacheDelete(weekScheduleCacheKey(storeId, weekStart));
     return published;
   },
 };

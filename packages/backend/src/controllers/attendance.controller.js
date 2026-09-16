@@ -3,10 +3,10 @@ import { AttendanceService } from "../services/attendance.service.js";
 export const AttendanceController = {
   async clockIn(req, res, next) {
     try {
-      const { storeId, shiftId, method } = req.body;
+      const { shiftId, method } = req.body;
       const record = await AttendanceService.clockIn({
         userId: req.user.id,
-        storeId,
+        storeId: req.params.storeId,
         shiftId,
         method,
       });
@@ -18,7 +18,7 @@ export const AttendanceController = {
 
   async clockOut(req, res, next) {
     try {
-      const record = await AttendanceService.clockOut({ userId: req.user.id });
+      const record = await AttendanceService.clockOut({ userId: req.user.id, storeId: req.params.storeId });
       res.json({ success: true, data: record });
     } catch (err) {
       next(err);

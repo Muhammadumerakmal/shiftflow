@@ -1,11 +1,22 @@
 import { UserModel } from "../models/user.model.js";
 import { StoreModel } from "../models/store.model.js";
+import { OrganizationModel } from "../models/organization.model.js";
+import { MembershipModel } from "../models/membership.model.js";
 import { hashPassword, comparePassword } from "../utils/password.js";
-import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
+import { signAccessToken, signRefreshToken, verifyRefreshToken, buildAccessPayload } from "../utils/jwt.js";
 import { AppError } from "../middleware/errorHandler.middleware.js";
 
+async function buildStoreRoles(userId, organizationId) {
+  const staffRecords = await StoreModel.findStaffByUserIdAndOrg(userId, organizationId);
+  const storeRoles = {};
+  for (const record of staffRecords) {
+    storeRoles[record.store_id] = record.role;
+  }
+  return storeRoles;
+}
+
 export const AuthService = {
-  async register({ email, password, fullName, storeName }) {
+  async registerOrganization({ email, password, fullName, orgName, storeName }) {
     const existing = await UserModel.findByEmail(email);
     if (existing) {
       throw new AppError("An account with this email already exists", 409);
@@ -17,24 +28,54 @@ export const AuthService = {
       email,
       fullName,
       passwordHash,
-      role: "owner",
     });
 
-    const store = await StoreModel.create({ name: storeName });
+    const slug = await OrganizationModel.generateUniqueSlug(orgName);
+    const organization = await OrganizationModel.create({ name: orgName, slug });
+
+    await MembershipModel.create({
+      organizationId: organization.id,
+      userId: user.id,
+      orgRole: "org_admin",
+    });
+
+    const store = await StoreModel.create({
+      organizationId: organization.id,
+      name: storeName,
+    });
+
     await StoreModel.linkStaff({
       storeId: store.id,
       userId: user.id,
-      isManager: true,
+      role: "manager",
+      position: "Owner",
     });
 
-    const accessToken = signAccessToken({
-      id: user.id,
-      role: user.role,
-      storeId: store.id,
-    });
+    await UserModel.updateDefaultOrg(user.id, organization.id);
+
+    const storeRoles = { [store.id]: "manager" };
+
+    const accessToken = signAccessToken(
+      buildAccessPayload({
+        userId: user.id,
+        organizationId: organization.id,
+        orgRole: "org_admin",
+        storeRoles,
+      })
+    );
     const refreshToken = signRefreshToken({ id: user.id });
 
-    return { user, store, accessToken, refreshToken };
+    return {
+      user: {
+        id: user.id,
+        fullName: user.full_name,
+        email: user.email,
+      },
+      organization,
+      store,
+      accessToken,
+      refreshToken,
+    };
   },
 
   async login({ email, password }) {
@@ -48,11 +89,29 @@ export const AuthService = {
       throw new AppError("Invalid email or password", 401);
     }
 
-    // Look up the user's store membership to include storeId in the token
-    const storeStaff = await StoreModel.findStaffByUserId(user.id);
-    const storeId = storeStaff?.store_id || null;
+    const memberships = await MembershipModel.listByUserId(user.id);
+    if (memberships.length === 0) {
+      throw new AppError("No organization memberships found", 403);
+    }
 
-    const accessToken = signAccessToken({ id: user.id, role: user.role, storeId });
+    let orgContext;
+    if (user.default_organization_id) {
+      orgContext = memberships.find((m) => m.organization_id === user.default_organization_id);
+    }
+    if (!orgContext) {
+      orgContext = memberships[0];
+    }
+
+    const storeRoles = await buildStoreRoles(user.id, orgContext.organization_id);
+
+    const accessToken = signAccessToken(
+      buildAccessPayload({
+        userId: user.id,
+        organizationId: orgContext.organization_id,
+        orgRole: orgContext.org_role,
+        storeRoles,
+      })
+    );
     const refreshToken = signRefreshToken({ id: user.id });
 
     return {
@@ -60,8 +119,20 @@ export const AuthService = {
         id: user.id,
         fullName: user.full_name,
         email: user.email,
-        role: user.role,
-        storeId,
+        phone: user.phone,
+        avatarUrl: user.avatar_url,
+      },
+      organizations: memberships.map((m) => ({
+        id: m.organization_id,
+        name: m.organization_name,
+        slug: m.slug,
+        role: m.org_role,
+      })),
+      activeOrganization: {
+        id: orgContext.organization_id,
+        name: orgContext.organization_name,
+        slug: orgContext.slug,
+        role: orgContext.org_role,
       },
       accessToken,
       refreshToken,
@@ -73,17 +144,45 @@ export const AuthService = {
     if (!user) {
       throw new AppError("User not found", 404);
     }
-    const store = await StoreModel.findStoreByUserId(userId);
+
+    const memberships = await MembershipModel.listByUserId(userId);
+
     return {
       id: user.id,
       fullName: user.full_name,
       email: user.email,
       phone: user.phone,
-      role: user.role,
       avatarUrl: user.avatar_url,
-      storeId: store?.id || null,
-      storeName: store?.name || null,
+      organizations: memberships.map((m) => ({
+        id: m.organization_id,
+        name: m.organization_name,
+        slug: m.slug,
+        role: m.org_role,
+      })),
     };
+  },
+
+  async switchOrganization(userId, organizationId) {
+    const membership = await MembershipModel.findByOrgAndUser(organizationId, userId);
+    if (!membership) {
+      throw new AppError("Access denied", 403);
+    }
+
+    await UserModel.updateDefaultOrg(userId, organizationId);
+
+    const storeRoles = await buildStoreRoles(userId, organizationId);
+
+    const accessToken = signAccessToken(
+      buildAccessPayload({
+        userId,
+        organizationId,
+        orgRole: membership.org_role,
+        storeRoles,
+      })
+    );
+    const refreshToken = signRefreshToken({ id: userId });
+
+    return { accessToken, refreshToken };
   },
 
   async refresh(refreshToken) {
@@ -99,10 +198,29 @@ export const AuthService = {
       throw new AppError("User no longer exists", 401);
     }
 
-    const storeStaff = await StoreModel.findStaffByUserId(user.id);
-    const storeId = storeStaff?.store_id || null;
+    const memberships = await MembershipModel.listByUserId(user.id);
+    if (memberships.length === 0) {
+      throw new AppError("No organization memberships found", 403);
+    }
 
-    const newAccessToken = signAccessToken({ id: user.id, role: user.role, storeId });
+    let orgContext;
+    if (user.default_organization_id) {
+      orgContext = memberships.find((m) => m.organization_id === user.default_organization_id);
+    }
+    if (!orgContext) {
+      orgContext = memberships[0];
+    }
+
+    const storeRoles = await buildStoreRoles(user.id, orgContext.organization_id);
+
+    const newAccessToken = signAccessToken(
+      buildAccessPayload({
+        userId: user.id,
+        organizationId: orgContext.organization_id,
+        orgRole: orgContext.org_role,
+        storeRoles,
+      })
+    );
     const newRefreshToken = signRefreshToken({ id: user.id });
 
     return { accessToken: newAccessToken, refreshToken: newRefreshToken };

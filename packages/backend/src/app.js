@@ -2,7 +2,9 @@ import express from "express";
 import cors from "cors";
 import routes from "./routes/index.js";
 import { errorHandler } from "./middleware/errorHandler.middleware.js";
+import { requestLogger } from "./middleware/requestLogger.middleware.js";
 import { env } from "./config/env.js";
+import { logger } from "./utils/logger.js";
 
 const app = express();
 
@@ -29,18 +31,28 @@ app.use(
   })
 );
 app.use(express.json());
+app.use(requestLogger);
 
 app.get("/", (req, res) => {
   res.json({ success: true, message: "ShiftFlow API", health: "/health" });
 });
 
 app.get("/health", (req, res) => {
-  res.json({ success: true, message: "ShiftFlow API is running" });
+  // External uptime monitors (UptimeRobot, Render health checks, etc.) should ping this endpoint.
+  // Expected: 200 OK with { success: true }. Any other response = downtime alert.
+  res.json({
+    success: true,
+    message: "ShiftFlow API is running",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
 });
 
 app.use("/api/v1", routes);
 
 // Error handler must be last
 app.use(errorHandler);
+
+logger.info({ port: env.port, env: env.nodeEnv }, "ShiftFlow API initialized");
 
 export default app;

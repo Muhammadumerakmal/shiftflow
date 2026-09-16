@@ -12,3 +12,12 @@ export function signRefreshToken(payload) {
 export function verifyRefreshToken(token) {
   return jwt.verify(token, env.jwtRefreshSecret);
 }
+
+export function buildAccessPayload({ userId, organizationId, orgRole, storeRoles }) {
+  return {
+    id: userId,
+    organizationId,
+    orgRole,
+    storeRoles,
+  };
+}

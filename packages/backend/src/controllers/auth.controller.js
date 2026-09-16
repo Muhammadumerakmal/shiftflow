@@ -1,22 +1,14 @@
 import { AuthService } from "../services/auth.service.js";
 
 export const AuthController = {
-  async me(req, res, next) {
+  async registerOrganization(req, res, next) {
     try {
-      const result = await AuthService.me(req.user.id);
-      res.status(200).json({ success: true, data: result });
-    } catch (err) {
-      next(err);
-    }
-  },
-
-  async register(req, res, next) {
-    try {
-      const { email, password, fullName, storeName } = req.body;
-      const result = await AuthService.register({
+      const { email, password, fullName, orgName, storeName } = req.body;
+      const result = await AuthService.registerOrganization({
         email,
         password,
         fullName,
+        orgName,
         storeName,
       });
       res.status(201).json({ success: true, data: result });
@@ -29,6 +21,25 @@ export const AuthController = {
     try {
       const { email, password } = req.body;
       const result = await AuthService.login({ email, password });
+      res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async me(req, res, next) {
+    try {
+      const result = await AuthService.me(req.user.id);
+      res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async switchOrganization(req, res, next) {
+    try {
+      const { organizationId } = req.body;
+      const result = await AuthService.switchOrganization(req.user.id, organizationId);
       res.status(200).json({ success: true, data: result });
     } catch (err) {
       next(err);

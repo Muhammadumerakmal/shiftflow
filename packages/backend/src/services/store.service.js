@@ -6,13 +6,13 @@ import { AppError } from "../middleware/errorHandler.middleware.js";
 export const StoreService = {
   async getStore(storeId) {
     const store = await StoreModel.findById(storeId);
-    if (!store) throw new AppError("Store not found", 404);
+    if (!store) throw new AppError("Access denied", 403);
     return store;
   },
 
   async updateStore(storeId, updates) {
     const store = await StoreModel.update(storeId, updates);
-    if (!store) throw new AppError("Store not found", 404);
+    if (!store) throw new AppError("Access denied", 403);
     return store;
   },
 
@@ -27,7 +27,6 @@ export const StoreService = {
   },
 
   async inviteStaff({ storeId, phone, fullName, position, invitedBy }) {
-    // Match existing user by phone, or create a new placeholder user
     let user = await UserModel.findByPhone(phone);
 
     if (!user) {
@@ -35,16 +34,15 @@ export const StoreService = {
         phone,
         fullName,
         email: null,
-        passwordHash: null, // staff log in via OTP, not password
-        role: "staff",
+        passwordHash: null,
       });
     }
 
     const storeStaff = await StoreModel.linkStaff({
       storeId,
       userId: user.id,
+      role: "staff",
       position,
-      isManager: false,
     });
 
     await ActivityLogService.log({
@@ -56,7 +54,6 @@ export const StoreService = {
       metadata: { phone, fullName, position },
     });
 
-    // TODO (V1.1): send SMS invite with app link + OTP via Twilio
     return { user, storeStaff };
   },
 

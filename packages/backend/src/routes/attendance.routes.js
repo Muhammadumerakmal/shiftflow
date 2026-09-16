@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { AttendanceController } from "../controllers/attendance.controller.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
-import { requireRole, requireStoreAccess } from "../middleware/storeAccess.middleware.js";
+import { tenantMiddleware } from "../middleware/tenant.middleware.js";
+import { requireStoreRole, requireAnyStoreRole } from "../middleware/storeAccess.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
 import { clockInSchema } from "../validations/attendance.validation.js";
 
@@ -9,13 +10,14 @@ const router = Router();
 
 router.use(authMiddleware);
 
-router.post("/attendance/clock-in", validate(clockInSchema), AttendanceController.clockIn);
-router.post("/attendance/clock-out", AttendanceController.clockOut);
+router.post("/stores/:storeId/attendance/clock-in", tenantMiddleware, requireAnyStoreRole(), validate(clockInSchema), AttendanceController.clockIn);
+router.post("/stores/:storeId/attendance/clock-out", tenantMiddleware, requireAnyStoreRole(), AttendanceController.clockOut);
 
-router.get("/stores/:storeId/attendance", requireStoreAccess, AttendanceController.listForStore);
+router.get("/stores/:storeId/attendance", tenantMiddleware, requireAnyStoreRole(), AttendanceController.listForStore);
 router.get(
   "/stores/:storeId/attendance/export",
-  requireRole("owner", "manager"),
+  tenantMiddleware,
+  requireStoreRole("manager"),
   AttendanceController.exportCSV
 );
 

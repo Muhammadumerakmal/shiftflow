@@ -1,9 +1,9 @@
 import { UserModel } from "../models/user.model.js";
 import { StoreModel } from "../models/store.model.js";
-import { signAccessToken, signRefreshToken } from "../utils/jwt.js";
+import { MembershipModel } from "../models/membership.model.js";
+import { signAccessToken, signRefreshToken, buildAccessPayload } from "../utils/jwt.js";
 import { AppError } from "../middleware/errorHandler.middleware.js";
 
-// TODO: Replace with Redis in V1.1 per SAD document
 const otpStore = new Map();
 
 function generateOtp() {
@@ -21,20 +21,33 @@ export const OtpService = {
       throw new AppError("No account found with this phone number", 404);
     }
 
-    const storeStaff = await StoreModel.findStaffByUserId(user.id);
-    if (!storeStaff) {
-      throw new AppError("This phone number is not linked to any store", 404);
+    const memberships = await MembershipModel.listByUserId(user.id);
+    if (memberships.length === 0) {
+      throw new AppError("This phone number is not linked to any organization", 404);
+    }
+
+    const orgContext = user.default_organization_id
+      ? memberships.find((m) => m.organization_id === user.default_organization_id)
+      : memberships[0];
+
+    const storeRoles = {};
+    if (orgContext) {
+      const staffRecords = await StoreModel.findStaffByUserIdAndOrg(user.id, orgContext.organization_id);
+      for (const record of staffRecords) {
+        storeRoles[record.store_id] = record.role;
+      }
     }
 
     const code = generateOtp();
     otpStore.set(phone, {
       code,
       userId: user.id,
-      storeId: storeStaff.store_id,
-      expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
+      organizationId: orgContext?.organization_id,
+      orgRole: orgContext?.org_role,
+      storeRoles,
+      expiresAt: Date.now() + 5 * 60 * 1000,
     });
 
-    // TODO: Send via Twilio in V1.1 — for now, log to console
     console.log(`[OTP] Code for ${phone}: ${code} (expires in 5 minutes)`);
 
     return { message: "OTP sent", phone };
@@ -66,11 +79,14 @@ export const OtpService = {
       throw new AppError("User account not found", 404);
     }
 
-    const accessToken = signAccessToken({
-      id: user.id,
-      role: user.role,
-      storeId: entry.storeId,
-    });
+    const accessToken = signAccessToken(
+      buildAccessPayload({
+        userId: user.id,
+        organizationId: entry.organizationId,
+        orgRole: entry.orgRole,
+        storeRoles: entry.storeRoles,
+      })
+    );
     const refreshToken = signRefreshToken({ id: user.id });
 
     return {
@@ -79,8 +95,6 @@ export const OtpService = {
         fullName: user.full_name,
         email: user.email,
         phone: user.phone,
-        role: user.role,
-        storeId: entry.storeId,
       },
       accessToken,
       refreshToken,

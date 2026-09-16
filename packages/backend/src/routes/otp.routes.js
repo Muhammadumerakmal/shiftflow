@@ -4,9 +4,10 @@ import { rateLimit } from "../middleware/rateLimit.middleware.js";
 
 const router = Router();
 
-const otpRateLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
+const otpRequestRateLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, keyType: "phone" });
+const otpVerifyRateLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
 
-router.post("/request", otpRateLimit, OtpController.requestOtp);
-router.post("/verify", otpRateLimit, OtpController.verifyOtp);
+router.post("/request", otpRequestRateLimit, OtpController.requestOtp);
+router.post("/verify", otpVerifyRateLimit, OtpController.verifyOtp);
 
 export default router;

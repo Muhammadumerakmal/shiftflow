@@ -11,6 +11,7 @@ export const env = {
   allowedOrigins: process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
     : null,
+  sentryDsn: process.env.SENTRY_DSN || null,
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || null,
     model: process.env.GEMINI_MODEL || "gemini-2.0-flash",

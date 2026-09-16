@@ -1,38 +1,71 @@
--- ShiftFlow MVP Database Schema
--- Run this in Neon SQL Editor (Dashboard -> SQL Editor -> paste -> Run)
+-- ShiftFlow Multi-Tenant SaaS Database Schema
+-- Fresh start — no migration from MVP data
 
--- Enable UUID generation
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- 1. Stores
-CREATE TABLE stores (
+-- ============================================================
+-- 1. Organizations (tenants — top of hierarchy)
+-- ============================================================
+CREATE TABLE organizations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
-  address TEXT,
-  timezone TEXT DEFAULT 'UTC',
-  business_hours JSONB,
+  slug TEXT UNIQUE NOT NULL,
+  plan TEXT DEFAULT 'free',
+  is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 2. Users (managers + staff)
+-- ============================================================
+-- 2. Users (global identity — no role column)
+-- ============================================================
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT UNIQUE,
   phone TEXT,
   full_name TEXT NOT NULL,
   password_hash TEXT,
-  role TEXT NOT NULL CHECK (role IN ('owner','manager','staff')),
   avatar_url TEXT,
+  default_organization_id UUID REFERENCES organizations(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 3. Store Staff (junction table)
+-- ============================================================
+-- 3. Memberships (user ↔ organization junction)
+-- ============================================================
+CREATE TABLE memberships (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  org_role TEXT NOT NULL CHECK (org_role IN ('org_admin', 'member')),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE (organization_id, user_id)
+);
+
+-- ============================================================
+-- 4. Stores (belongs to one organization)
+-- ============================================================
+CREATE TABLE stores (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  address TEXT,
+  timezone TEXT DEFAULT 'UTC',
+  business_hours JSONB,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ============================================================
+-- 5. Store Staff (junction — users to stores, with store-level role)
+-- ============================================================
 CREATE TABLE store_staff (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('manager', 'staff')),
   position TEXT,
   hourly_rate NUMERIC,
   can_open BOOLEAN DEFAULT false,
@@ -42,7 +75,26 @@ CREATE TABLE store_staff (
   UNIQUE (store_id, user_id)
 );
 
--- 4. Shifts
+-- ============================================================
+-- 6. Invites (email-based org/store invitations)
+-- ============================================================
+CREATE TABLE invites (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  store_id UUID REFERENCES stores(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  org_role TEXT NOT NULL CHECK (org_role IN ('org_admin', 'member')),
+  store_role TEXT CHECK (store_role IN ('manager', 'staff')),
+  token TEXT UNIQUE NOT NULL,
+  invited_by UUID NOT NULL REFERENCES users(id),
+  expires_at TIMESTAMPTZ NOT NULL,
+  accepted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ============================================================
+-- 7. Shifts (store-scoped — unchanged shape)
+-- ============================================================
 CREATE TABLE shifts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
@@ -57,7 +109,9 @@ CREATE TABLE shifts (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 5. Shift Swap Requests
+-- ============================================================
+-- 8. Shift Swap Requests (store-scoped via shift)
+-- ============================================================
 CREATE TABLE shift_swap_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   shift_id UUID NOT NULL REFERENCES shifts(id) ON DELETE CASCADE,
@@ -70,7 +124,9 @@ CREATE TABLE shift_swap_requests (
   resolved_at TIMESTAMPTZ
 );
 
--- 6. Time Off Requests
+-- ============================================================
+-- 9. Time Off Requests (store-scoped)
+-- ============================================================
 CREATE TABLE time_off_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -84,7 +140,9 @@ CREATE TABLE time_off_requests (
   reviewed_at TIMESTAMPTZ
 );
 
--- 7. Attendance Records
+-- ============================================================
+-- 10. Attendance Records (store-scoped)
+-- ============================================================
 CREATE TABLE attendance_records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   shift_id UUID REFERENCES shifts(id),
@@ -99,7 +157,9 @@ CREATE TABLE attendance_records (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 8. Notifications
+-- ============================================================
+-- 11. Notifications (user-scoped)
+-- ============================================================
 CREATE TABLE notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -111,7 +171,9 @@ CREATE TABLE notifications (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 9. Activity Log (audit trail)
+-- ============================================================
+-- 12. Activity Log (audit trail — store-scoped)
+-- ============================================================
 CREATE TABLE activity_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   store_id UUID NOT NULL REFERENCES stores(id),
@@ -123,9 +185,17 @@ CREATE TABLE activity_log (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- ============================================================
 -- Indexes
+-- ============================================================
+CREATE INDEX idx_organizations_slug ON organizations (slug);
+CREATE INDEX idx_memberships_org ON memberships (organization_id);
+CREATE INDEX idx_memberships_user ON memberships (user_id);
+CREATE INDEX idx_stores_org ON stores (organization_id);
 CREATE INDEX idx_store_staff_store ON store_staff (store_id);
 CREATE INDEX idx_store_staff_user ON store_staff (user_id);
+CREATE INDEX idx_invites_token ON invites (token);
+CREATE INDEX idx_invites_email ON invites (email);
 CREATE INDEX idx_shifts_store_start ON shifts (store_id, starts_at);
 CREATE INDEX idx_shifts_user_start ON shifts (user_id, starts_at);
 CREATE INDEX idx_swap_shift ON shift_swap_requests (shift_id);

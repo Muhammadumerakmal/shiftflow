@@ -13,7 +13,8 @@ export function authMiddleware(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, env.jwtAccessSecret);
-    req.user = decoded; // { id, role, storeId }
+    req.user = decoded;
+    req.organizationId = decoded.storeId;
     next();
   } catch (err) {
     next(new AppError("Invalid or expired token", 401));
