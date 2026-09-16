@@ -39,6 +39,7 @@ export function AuthProvider({ children }) {
     const result = await api.login(email, password);
     localStorage.setItem("accessToken", result.accessToken);
     localStorage.setItem("user", JSON.stringify(result.user));
+    localStorage.setItem("organizationId", result.activeOrganization.id);
     setUser(result.user);
 
     if (result.user.storeId) {
@@ -57,10 +58,11 @@ export function AuthProvider({ children }) {
   }
 
   async function register(payload) {
-    const result = await api.register(payload);
+    const result = await api.registerOrganization(payload);
     localStorage.setItem("accessToken", result.accessToken);
     localStorage.setItem("user", JSON.stringify(result.user));
     localStorage.setItem("storeId", result.store.id);
+    localStorage.setItem("organizationId", result.organization.id);
     setUser(result.user);
     setStoreId(result.store.id);
     return result;

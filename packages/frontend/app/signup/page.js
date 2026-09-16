@@ -11,6 +11,7 @@ export default function SignupPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [orgName, setOrgName] = useState("");
   const [storeName, setStoreName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,7 +21,7 @@ export default function SignupPage() {
     setError("");
     setLoading(true);
     try {
-      await register({ fullName, email, password, storeName });
+      await register({ fullName, email, password, orgName, storeName });
       router.push("/schedule");
     } catch (err) {
       setError(err.message);
@@ -97,7 +98,19 @@ export default function SignupPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1.5">Store Name</label>
+            <label className="block text-sm font-medium text-text-primary mb-1.5">Organization Name</label>
+            <input
+              type="text"
+              required
+              value={orgName}
+              onChange={(e) => setOrgName(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition"
+              placeholder="Riverside Apparel Inc."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1.5">First Store Name</label>
             <input
               type="text"
               required

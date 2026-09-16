@@ -32,8 +32,8 @@ export const api = {
   // Auth
   login: (email, password) =>
     request("/auth/login", { method: "POST", body: { email, password }, auth: false }),
-  register: (payload) =>
-    request("/auth/register", { method: "POST", body: payload, auth: false }),
+  registerOrganization: (payload) =>
+    request("/auth/register-organization", { method: "POST", body: payload, auth: false }),
   getMe: () => request("/auth/me"),
 
   // OTP (Staff login)
