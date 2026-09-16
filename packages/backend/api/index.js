@@ -1,5 +1,3 @@
-import app from "../src/app.js";
-
 export const config = {
   api: {
     bodyParser: false,
@@ -8,6 +6,7 @@ export const config = {
 
 export default async function handler(req, res) {
   try {
+    const { default: app } = await import("../src/app.js");
     return app(req, res);
   } catch (err) {
     console.error("CRASH:", err.stack || err.message || err);
