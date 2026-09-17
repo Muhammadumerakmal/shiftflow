@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../lib/auth-context";
+import EnablePushPrompt from "../../components/EnablePushPrompt";
 
 const TABS = [
   { href: "/my-schedule", label: "Schedule", icon: "📅" },
@@ -44,6 +45,8 @@ export default function StaffLayout({ children }) {
       </header>
 
       <main className="p-4">{children}</main>
+
+      <EnablePushPrompt />
 
       <nav className="fixed bottom-0 left-0 right-0 bg-surface border-t border-gray-100 flex z-50">
         {TABS.map((tab) => {

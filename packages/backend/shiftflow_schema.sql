@@ -172,6 +172,19 @@ CREATE TABLE notifications (
 );
 
 -- ============================================================
+-- 11b. Push Subscriptions (Web Push / VAPID — user-scoped)
+-- ============================================================
+CREATE TABLE push_subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  endpoint TEXT NOT NULL UNIQUE,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ============================================================
 -- 12. Activity Log (audit trail — store-scoped)
 -- ============================================================
 CREATE TABLE activity_log (
@@ -204,4 +217,5 @@ CREATE INDEX idx_timeoff_user_status ON time_off_requests (user_id, status);
 CREATE INDEX idx_attendance_store_clockin ON attendance_records (store_id, clock_in_at);
 CREATE INDEX idx_attendance_user_clockin ON attendance_records (user_id, clock_in_at);
 CREATE INDEX idx_notifications_user_read_created ON notifications (user_id, is_read, created_at DESC);
+CREATE INDEX idx_push_subscriptions_user ON push_subscriptions (user_id);
 CREATE INDEX idx_activity_store_created ON activity_log (store_id, created_at DESC);

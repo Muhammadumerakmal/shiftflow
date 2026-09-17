@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/auth-context";
 import Sidebar from "../../components/Sidebar";
 import ChatWidget from "../../components/ChatWidget";
+import EnablePushPrompt from "../../components/EnablePushPrompt";
 
 export default function DashboardLayout({ children }) {
   const { user, loading } = useAuth();
@@ -24,6 +25,7 @@ export default function DashboardLayout({ children }) {
       <Sidebar />
       <main className="flex-1 p-6 bg-neutral min-h-screen">{children}</main>
       <ChatWidget />
+      <EnablePushPrompt />
     </div>
   );
 }

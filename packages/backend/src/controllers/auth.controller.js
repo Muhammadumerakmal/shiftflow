@@ -20,7 +20,11 @@ export const AuthController = {
   async login(req, res, next) {
     try {
       const { email, password } = req.body;
-      const result = await AuthService.login({ email, password });
+      const result = await AuthService.login({
+        email,
+        password,
+        meta: { userAgent: req.get("user-agent") },
+      });
       res.status(200).json({ success: true, data: result });
     } catch (err) {
       next(err);

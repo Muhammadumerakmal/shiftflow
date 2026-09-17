@@ -14,7 +14,12 @@ export const env = {
   sentryDsn: process.env.SENTRY_DSN || null,
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || null,
-    model: process.env.GEMINI_MODEL || "gemini-2.0-flash",
+    model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
+  },
+  vapid: {
+    publicKey: process.env.VAPID_PUBLIC_KEY || null,
+    privateKey: process.env.VAPID_PRIVATE_KEY || null,
+    subject: process.env.VAPID_SUBJECT || "mailto:admin@shiftflow.app",
   },
   smtp: {
     host: process.env.SMTP_HOST || null,

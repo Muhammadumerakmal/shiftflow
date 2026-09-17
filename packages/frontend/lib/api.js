@@ -95,4 +95,11 @@ export const api = {
   // AI agent (OpenAI function-calling, store-scoped)
   chat: (storeId, message, history = []) =>
     request(`/stores/${storeId}/ai/chat`, { method: "POST", body: { message, history } }),
+
+  // Web Push
+  getVapidPublicKey: () => request(`/push/public-key`, { auth: false }),
+  subscribePush: (subscription) =>
+    request(`/push/subscribe`, { method: "POST", body: { subscription } }),
+  unsubscribePush: (endpoint) =>
+    request(`/push/unsubscribe`, { method: "POST", body: { endpoint } }),
 };

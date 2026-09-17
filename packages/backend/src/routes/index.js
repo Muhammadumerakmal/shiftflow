@@ -9,6 +9,7 @@ import swapRoutes from "./swap.routes.js";
 import timeOffRoutes from "./timeOff.routes.js";
 import attendanceRoutes from "./attendance.routes.js";
 import notificationRoutes from "./notification.routes.js";
+import pushRoutes from "./push.routes.js";
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use("/", swapRoutes);
 router.use("/", timeOffRoutes);
 router.use("/", attendanceRoutes);
 router.use("/", notificationRoutes);
+router.use("/", pushRoutes);
 
 export default router;

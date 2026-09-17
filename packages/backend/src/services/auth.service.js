@@ -4,7 +4,18 @@ import { OrganizationModel } from "../models/organization.model.js";
 import { MembershipModel } from "../models/membership.model.js";
 import { hashPassword, comparePassword } from "../utils/password.js";
 import { signAccessToken, signRefreshToken, verifyRefreshToken, buildAccessPayload } from "../utils/jwt.js";
+import { PushService } from "./push.service.js";
 import { AppError } from "../middleware/errorHandler.middleware.js";
+
+// Turn a raw User-Agent into a short human label for the sign-in alert.
+function shortDevice(ua = "") {
+  if (/Android/i.test(ua)) return "an Android device";
+  if (/iPhone|iPad|iPod/i.test(ua)) return "an iOS device";
+  if (/Windows/i.test(ua)) return "a Windows device";
+  if (/Macintosh|Mac OS/i.test(ua)) return "a Mac";
+  if (/Linux/i.test(ua)) return "a Linux device";
+  return "a new device";
+}
 
 async function buildStoreRoles(userId, organizationId) {
   const staffRecords = await StoreModel.findStaffByUserIdAndOrg(userId, organizationId);
@@ -78,7 +89,7 @@ export const AuthService = {
     };
   },
 
-  async login({ email, password }) {
+  async login({ email, password, meta }) {
     const user = await UserModel.findByEmail(email);
     if (!user || !user.password_hash) {
       throw new AppError("Invalid email or password", 401);
@@ -88,6 +99,16 @@ export const AuthService = {
     if (!isMatch) {
       throw new AppError("Invalid email or password", 401);
     }
+
+    // Fire a "new sign-in" Web Push to the user's already-registered devices
+    // (best-effort — first-ever login has no devices yet, so nothing sends).
+    const when = new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
+    const device = meta?.userAgent ? ` from ${shortDevice(meta.userAgent)}` : "";
+    PushService.sendToUser(user.id, {
+      title: "New sign-in to ShiftFlow",
+      body: `Your account was just signed in${device} at ${when}.`,
+      url: "/settings",
+    }).catch(() => {});
 
     const memberships = await MembershipModel.listByUserId(user.id);
     if (memberships.length === 0) {
