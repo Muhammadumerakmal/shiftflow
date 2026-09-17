@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "../../../lib/auth-context";
+import NotificationsToggle from "../../../components/NotificationsToggle";
 
 export default function SettingsPage() {
   const { user, storeId } = useAuth();
@@ -28,6 +29,10 @@ export default function SettingsPage() {
         <div>
           <label className="block text-xs font-medium text-text-muted mb-1">Store ID</label>
           <p className="font-mono text-xs text-text-secondary bg-neutral rounded-lg px-3 py-2 break-all">{storeId}</p>
+        </div>
+
+        <div className="pt-4 border-t border-gray-100">
+          <NotificationsToggle />
         </div>
       </div>
     </div>
